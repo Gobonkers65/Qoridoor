@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moderniserat Qoridor</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <div class="player-panel" id="player1-panel">
+            <h2>Spelare 1</h2>
+            <div class="pawn-display player1-pawn-bg"></div>
+            <div class="action-buttons">
+                <button class="action-button" data-mode="move" data-player="1">Flytta Pjäs</button>
+                <button class="action-button" data-mode="wall-h" data-player="1">Horisontellt Hinder</button>
+                <button class="action-button" data-mode="wall-v" data-player="1">Vertikalt Hinder</button>
+            </div>
+            <p>Väggar kvar:</p>
+            <div class="wall-stack" id="player1-wall-stack"></div>
+            <span id="player1-walls-count" class="wall-count-text">10</span>
+        </div>
+
+        <div id="main-game-area">
+            <header>
+                <h1>Qoridor</h1>
+                <div id="turn-indicator">
+                    <p>Nästa drag: <span id="current-player-name">Spelare 1</span></p>
+                </div>
+            </header>
+            <div id="board-container">
+                <div id="game-board">
+                    </div>
+            </div>
+            <footer>
+                <p id="winner-message" class="hidden"></p>
+            </footer>
+        </div>
+
+        <div class="player-panel" id="player2-panel">
+            <h2>Spelare 2</h2>
+            <div class="pawn-display player2-pawn-bg"></div>
+            <div class="action-buttons">
+                <button class="action-button" data-mode="move" data-player="2">Flytta Pjäs</button>
+                <button class="action-button" data-mode="wall-h" data-player="2">Horisontellt Hinder</button>
+                <button class="action-button" data-mode="wall-v" data-player="2">Vertikalt Hinder</button>
+            </div>
+            <p>Väggar kvar:</p>
+            <div class="wall-stack" id="player2-wall-stack"></div>
+            <span id="player2-walls-count" class="wall-count-text">10</span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,302 @@
+:root {
+    --player1-color: #e74c3c; /* Röd */
+    --player1-dark-color: #c0392b; /* Mörkare röd för kant */
+    --player1-light-color: #f5b7b1;
+    --player1-preview-color: rgba(231, 76, 60, 0.5); /* Semi-transparent röd */
+    --player2-color: #3498db; /* Blå */
+    --player2-dark-color: #2980b9; /* Mörkare blå för kant */
+    --player2-light-color: #a9cce3;
+    --player2-preview-color: rgba(52, 152, 219, 0.5); /* Semi-transparent blå */
+    --board-bg: #ecf0f1;
+    --cell-bg: #ffffff;
+    --cell-border: #bdc3c7;
+    --groove-bg: #dde2e3;
+    --groove-hover: #cacfd2; 
+    --text-color: #2c3e50;
+    --font-main: 'Roboto', sans-serif;
+    --button-bg: #7f8c8d;
+    --button-hover-bg: #95a5a6;
+    --button-selected-bg: var(--text-color);
+    --player1-button-selected-bg: var(--player1-color);
+    --player2-button-selected-bg: var(--player2-color);
+}
+
+body {
+    font-family: var(--font-main);
+    background-color: #f4f6f7;
+    color: var(--text-color);
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    margin: 0;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+#game-container {
+    display: flex;
+    gap: 30px;
+    align-items: flex-start;
+}
+
+.player-panel {
+    background-color: var(--board-bg);
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    text-align: center;
+    width: 200px; 
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.player-panel h2 {
+    margin-top: 0;
+    font-size: 1.5em;
+}
+#player1-panel h2 { color: var(--player1-color); }
+#player2-panel h2 { color: var(--player2-color); }
+
+.pawn-display {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    margin: 10px auto;
+    border: 3px solid var(--text-color);
+}
+.player1-pawn-bg { background-color: var(--player1-color); }
+.player2-pawn-bg { background-color: var(--player2-color); }
+
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 15px 0;
+    width: 100%;
+}
+
+.action-button {
+    background-color: var(--button-bg);
+    color: white;
+    border: none;
+    padding: 10px;
+    font-size: 0.9em;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.2s;
+    width: 100%;
+}
+.action-button:hover {
+    background-color: var(--button-hover-bg);
+}
+.action-button.selected-action {
+    background-color: var(--button-selected-bg); 
+    font-weight: bold;
+    box-shadow: 0 0 8px rgba(0,0,0,0.3);
+}
+#player1-panel .action-button.selected-action {
+    background-color: var(--player1-button-selected-bg);
+}
+#player2-panel .action-button.selected-action {
+    background-color: var(--player2-button-selected-bg);
+}
+.action-button:disabled {
+    background-color: #bdc3c7;
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+.wall-stack {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 10px;
+    margin-bottom: 5px;
+    justify-content: center;
+    min-height: 50px;
+}
+
+.wall-visual {
+    width: 20px;
+    height: 5px;
+    border-radius: 2px;
+}
+.player1-wall-visual { background-color: var(--player1-color); border: 1px solid var(--player1-dark-color); }
+.player2-wall-visual { background-color: var(--player2-color); border: 1px solid var(--player2-dark-color); }
+
+.wall-count-text {
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+#main-game-area {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+#main-game-area header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+#main-game-area header h1 {
+    font-size: 2.5em;
+    margin: 0 0 10px 0;
+    color: var(--text-color);
+}
+
+#turn-indicator {
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-size: 1.2em;
+    font-weight: bold;
+    transition: background-color 0.3s, color 0.3s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+}
+
+#turn-indicator.player1-turn {
+    background-color: var(--player1-color);
+    color: white;
+}
+#turn-indicator.player2-turn {
+    background-color: var(--player2-color);
+    color: white;
+}
+
+#board-container {
+    border: 3px solid #7f8c8d;
+    background-color: var(--groove-bg);
+    padding: 5px;
+    border-radius: 8px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+}
+
+#game-board {
+    display: grid;
+    grid-template-columns: repeat(17, auto);
+    grid-template-rows: repeat(17, auto);
+    position: relative; 
+}
+
+.cell {
+    width: 40px;
+    height: 40px;
+    background-color: var(--cell-bg);
+    box-sizing: border-box;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+.cell:hover {
+    background-color: #f0f0f0; 
+}
+.cell.selected.player1 { background-color: var(--player1-light-color) !important; }
+.cell.selected.player2 { background-color: var(--player2-light-color) !important; }
+
+.h-groove, .v-groove {
+    background-color: var(--groove-bg); /* Basfärg för springor */
+    box-sizing: border-box;
+    transition: background-color 0.1s; /* Snabbare transition för previews */
+}
+.h-groove { width: 40px; height: 7px; }
+.v-groove { width: 7px; height: 40px; }
+
+.intersection {
+    width: 7px;
+    height: 7px;
+    background-color: var(--groove-bg);
+    box-sizing: border-box;
+    cursor: default; 
+    transition: background-color 0.2s;
+}
+.intersection.wall-placement-hoverable:hover {
+    background-color: var(--groove-hover); 
+    cursor: pointer;
+}
+
+/* Grundstil för placerade väggar (skugga etc.) */
+.h-wall-placed, .v-wall-placed {
+    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2); 
+}
+.h-wall-placed {
+    border-top: 1px solid transparent; 
+    border-bottom: 1px solid transparent;
+}
+.v-wall-placed {
+    border-left: 1px solid transparent;
+    border-right: 1px solid transparent;
+}
+
+/* Spelarspecifika väggfärger och kanter - dessa bör göra dem synliga! */
+.h-wall-placed.player1-wall,
+.v-wall-placed.player1-wall {
+    background-color: var(--player1-color) !important;
+}
+.h-wall-placed.player1-wall {
+    border-top-color: var(--player1-dark-color) !important;
+    border-bottom-color: var(--player1-dark-color) !important;
+}
+.v-wall-placed.player1-wall {
+    border-left-color: var(--player1-dark-color) !important;
+    border-right-color: var(--player1-dark-color) !important;
+}
+
+.h-wall-placed.player2-wall,
+.v-wall-placed.player2-wall {
+    background-color: var(--player2-color) !important;
+}
+.h-wall-placed.player2-wall {
+    border-top-color: var(--player2-dark-color) !important;
+    border-bottom-color: var(--player2-dark-color) !important;
+}
+.v-wall-placed.player2-wall {
+    border-left-color: var(--player2-dark-color) !important;
+    border-right-color: var(--player2-dark-color) !important;
+}
+
+/* Förhandsvisning av väggar */
+.h-groove.wall-preview, .v-groove.wall-preview {
+    /* Generell preview, kan tas bort om spelarspecifik är tillräcklig */
+    /* background-color: rgba(128, 128, 128, 0.5) !important; */
+}
+.h-groove.player1-wall-preview, .v-groove.player1-wall-preview {
+    background-color: var(--player1-preview-color) !important;
+}
+.h-groove.player2-wall-preview, .v-groove.player2-wall-preview {
+    background-color: var(--player2-preview-color) !important;
+}
+
+
+.pawn {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    box-sizing: border-box;
+    position: absolute;
+    transition: top 0.3s ease-out, left 0.3s ease-out;
+    pointer-events: none;
+    border: 3px solid rgba(0,0,0,0.7);
+    box-shadow: 0 3px 7px rgba(0,0,0,0.3);
+}
+
+#pawn1 { background-color: var(--player1-color); }
+#pawn2 { background-color: var(--player2-color); }
+
+#main-game-area footer {
+    margin-top: 25px;
+    text-align: center;
+    min-height: 50px; 
+}
+
+#winner-message {
+    margin-top: 15px;
+    font-size: 1.6em;
+    font-weight: bold;
+}
+#winner-message.player1wins { color: var(--player1-color); }
+#winner-message.player2wins { color: var(--player2-color); }
