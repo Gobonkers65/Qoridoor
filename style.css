@@ -1,302 +1,204 @@
 :root {
-    --player1-color: #e74c3c; /* Röd */
-    --player1-dark-color: #c0392b; /* Mörkare röd för kant */
-    --player1-light-color: #f5b7b1;
-    --player1-preview-color: rgba(231, 76, 60, 0.5); /* Semi-transparent röd */
-    --player2-color: #3498db; /* Blå */
-    --player2-dark-color: #2980b9; /* Mörkare blå för kant */
-    --player2-light-color: #a9cce3;
-    --player2-preview-color: rgba(52, 152, 219, 0.5); /* Semi-transparent blå */
-    --board-bg: #ecf0f1;
-    --cell-bg: #ffffff;
-    --cell-border: #bdc3c7;
-    --groove-bg: #dde2e3;
-    --groove-hover: #cacfd2; 
-    --text-color: #2c3e50;
-    --font-main: 'Roboto', sans-serif;
-    --button-bg: #7f8c8d;
-    --button-hover-bg: #95a5a6;
-    --button-selected-bg: var(--text-color);
-    --player1-button-selected-bg: var(--player1-color);
-    --player2-button-selected-bg: var(--player2-color);
+    --bg-color: #eef2f3;
+    --board-bg: #ffffff;
+    --groove-bg: #dfe6e9;
+    --groove-hover: #b2bec3;
+    --p1-color: #ff6b6b;
+    --p2-color: #48dbfb;
+    --text-color: #2d3436;
+    --wall-color: #2d3436;
+    
+    /* Lite mindre celler för att spara plats på höjden */
+    --cell-size: 38px; 
+    --gap-size: 8px;
 }
 
 body {
-    font-family: var(--font-main);
-    background-color: #f4f6f7;
+    font-family: 'Poppins', sans-serif;
+    background-color: var(--bg-color);
     color: var(--text-color);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
-    min-height: 100vh;
     margin: 0;
-    padding: 20px;
-    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden; /* Försöker hindra scroll */
+}
+
+.main-header {
+    text-align: center;
+    padding: 5px; /* Mindre luft */
+    width: 100%;
+    background: white;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    z-index: 10;
+}
+
+h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
+.accent { color: var(--p1-color); }
+
+#game-status {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #636e72;
 }
 
 #game-container {
     display: flex;
-    gap: 30px;
-    align-items: flex-start;
-}
-
-.player-panel {
-    background-color: var(--board-bg);
-    padding: 20px;
-    border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    text-align: center;
-    width: 200px; 
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.player-panel h2 {
-    margin-top: 0;
-    font-size: 1.5em;
-}
-#player1-panel h2 { color: var(--player1-color); }
-#player2-panel h2 { color: var(--player2-color); }
-
-.pawn-display {
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    margin: 10px auto;
-    border: 3px solid var(--text-color);
-}
-.player1-pawn-bg { background-color: var(--player1-color); }
-.player2-pawn-bg { background-color: var(--player2-color); }
-
-.action-buttons {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 15px 0;
-    width: 100%;
-}
-
-.action-button {
-    background-color: var(--button-bg);
-    color: white;
-    border: none;
+    gap: 10px;
     padding: 10px;
-    font-size: 0.9em;
-    border-radius: 5px;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    width: 100%;
-}
-.action-button:hover {
-    background-color: var(--button-hover-bg);
-}
-.action-button.selected-action {
-    background-color: var(--button-selected-bg); 
-    font-weight: bold;
-    box-shadow: 0 0 8px rgba(0,0,0,0.3);
-}
-#player1-panel .action-button.selected-action {
-    background-color: var(--player1-button-selected-bg);
-}
-#player2-panel .action-button.selected-action {
-    background-color: var(--player2-button-selected-bg);
-}
-.action-button:disabled {
-    background-color: #bdc3c7;
-    cursor: not-allowed;
-    opacity: 0.7;
-}
-
-.wall-stack {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
-    margin-top: 10px;
-    margin-bottom: 5px;
-    justify-content: center;
-    min-height: 50px;
-}
-
-.wall-visual {
-    width: 20px;
-    height: 5px;
-    border-radius: 2px;
-}
-.player1-wall-visual { background-color: var(--player1-color); border: 1px solid var(--player1-dark-color); }
-.player2-wall-visual { background-color: var(--player2-color); border: 1px solid var(--player2-dark-color); }
-
-.wall-count-text {
-    font-size: 0.9em;
-    color: #7f8c8d;
-}
-
-#main-game-area {
-    display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    width: 100%;
+    max-width: 1000px;
+    box-sizing: border-box;
+    height: 100%;
 }
 
-#main-game-area header {
-    margin-bottom: 20px;
-    text-align: center;
+/* Responsiv layout - Mobil */
+@media (max-width: 850px) {
+    #game-container {
+        flex-direction: column-reverse; /* P1 längst ner */
+        padding: 5px;
+        gap: 5px;
+        justify-content: space-between; /* Sprid ut dem jämnt */
+    }
+    #player2-panel { order: 3; }
+    #board-wrapper { order: 2; margin: 5px 0; }
+    #player1-panel { order: 1; }
+    
+    :root { --cell-size: 32px; --gap-size: 6px; }
 }
 
-#main-game-area header h1 {
-    font-size: 2.5em;
-    margin: 0 0 10px 0;
-    color: var(--text-color);
+/* Kompaktare Paneler */
+.player-panel {
+    background: white;
+    border-radius: 12px;
+    padding: 8px 12px; /* Mycket mindre luft */
+    width: 280px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: all 0.3s ease;
+    border: 2px solid transparent;
+}
+.player-panel.active { border-color: var(--text-color); }
+
+.panel-content { 
+    display: flex; 
+    align-items: center; 
+    gap: 10px; 
+    margin-bottom: 6px; /* Mindre mellanrum till knappar */
 }
 
-#turn-indicator {
-    padding: 10px 20px;
-    border-radius: 8px;
-    font-size: 1.2em;
-    font-weight: bold;
-    transition: background-color 0.3s, color 0.3s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.08);
-}
+/* Mindre ikoner och text */
+.pawn-icon { width: 24px; height: 24px; border-radius: 50%; }
+.player1-bg { background: var(--p1-color); }
+.player2-bg { background: var(--p2-color); }
 
-#turn-indicator.player1-turn {
-    background-color: var(--player1-color);
-    color: white;
-}
-#turn-indicator.player2-turn {
-    background-color: var(--player2-color);
-    color: white;
-}
+.info-group h2 { margin: 0; font-size: 1rem; }
+.wall-tracker { font-size: 0.8rem; color: #636e72; margin: 0; }
+.wall-tracker span { font-weight: bold; font-size: 1rem; color: var(--text-color); }
 
-#board-container {
-    border: 3px solid #7f8c8d;
-    background-color: var(--groove-bg);
-    padding: 5px;
-    border-radius: 8px;
-    box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+/* Kompaktare knappar */
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+
+.btn-action {
+    padding: 6px 4px; /* Slimmare knappar */
+    border: none;
+    background: #f1f2f6;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.75rem; /* Mindre text */
 }
+.btn-action.selected { background: var(--text-color); color: white; }
+.btn-action:disabled { opacity: 0.3; cursor: not-allowed; }
+
+/* Brädet */
+#board-wrapper { position: relative; flex-shrink: 0; }
 
 #game-board {
     display: grid;
     grid-template-columns: repeat(17, auto);
-    grid-template-rows: repeat(17, auto);
-    position: relative; 
+    background: var(--groove-bg);
+    padding: var(--gap-size);
+    border-radius: 8px;
+    box-shadow: 0 5px 15px rgba(0,0,0,0.1);
 }
 
 .cell {
-    width: 40px;
-    height: 40px;
-    background-color: var(--cell-bg);
-    box-sizing: border-box;
+    width: var(--cell-size);
+    height: var(--cell-size);
+    background: var(--board-bg);
+    border-radius: 3px;
     display: flex;
     justify-content: center;
     align-items: center;
     cursor: pointer;
-    transition: background-color 0.2s;
+    position: relative;
 }
-.cell:hover {
-    background-color: #f0f0f0; 
-}
-.cell.selected.player1 { background-color: var(--player1-light-color) !important; }
-.cell.selected.player2 { background-color: var(--player2-light-color) !important; }
-
-.h-groove, .v-groove {
-    background-color: var(--groove-bg); /* Basfärg för springor */
-    box-sizing: border-box;
-    transition: background-color 0.1s; /* Snabbare transition för previews */
-}
-.h-groove { width: 40px; height: 7px; }
-.v-groove { width: 7px; height: 40px; }
-
-.intersection {
-    width: 7px;
-    height: 7px;
-    background-color: var(--groove-bg);
-    box-sizing: border-box;
-    cursor: default; 
-    transition: background-color 0.2s;
-}
-.intersection.wall-placement-hoverable:hover {
-    background-color: var(--groove-hover); 
-    cursor: pointer;
-}
-
-/* Grundstil för placerade väggar (skugga etc.) */
-.h-wall-placed, .v-wall-placed {
-    box-shadow: inset 0 1px 2px rgba(0,0,0,0.2); 
-}
-.h-wall-placed {
-    border-top: 1px solid transparent; 
-    border-bottom: 1px solid transparent;
-}
-.v-wall-placed {
-    border-left: 1px solid transparent;
-    border-right: 1px solid transparent;
-}
-
-/* Spelarspecifika väggfärger och kanter - dessa bör göra dem synliga! */
-.h-wall-placed.player1-wall,
-.v-wall-placed.player1-wall {
-    background-color: var(--player1-color) !important;
-}
-.h-wall-placed.player1-wall {
-    border-top-color: var(--player1-dark-color) !important;
-    border-bottom-color: var(--player1-dark-color) !important;
-}
-.v-wall-placed.player1-wall {
-    border-left-color: var(--player1-dark-color) !important;
-    border-right-color: var(--player1-dark-color) !important;
-}
-
-.h-wall-placed.player2-wall,
-.v-wall-placed.player2-wall {
-    background-color: var(--player2-color) !important;
-}
-.h-wall-placed.player2-wall {
-    border-top-color: var(--player2-dark-color) !important;
-    border-bottom-color: var(--player2-dark-color) !important;
-}
-.v-wall-placed.player2-wall {
-    border-left-color: var(--player2-dark-color) !important;
-    border-right-color: var(--player2-dark-color) !important;
-}
-
-/* Förhandsvisning av väggar */
-.h-groove.wall-preview, .v-groove.wall-preview {
-    /* Generell preview, kan tas bort om spelarspecifik är tillräcklig */
-    /* background-color: rgba(128, 128, 128, 0.5) !important; */
-}
-.h-groove.player1-wall-preview, .v-groove.player1-wall-preview {
-    background-color: var(--player1-preview-color) !important;
-}
-.h-groove.player2-wall-preview, .v-groove.player2-wall-preview {
-    background-color: var(--player2-preview-color) !important;
-}
-
-
-.pawn {
-    width: 32px;
-    height: 32px;
+.cell.valid-move::after {
+    content: '';
+    width: 30%; height: 30%;
+    background: rgba(46, 204, 113, 0.5);
     border-radius: 50%;
-    box-sizing: border-box;
-    position: absolute;
-    transition: top 0.3s ease-out, left 0.3s ease-out;
-    pointer-events: none;
-    border: 3px solid rgba(0,0,0,0.7);
-    box-shadow: 0 3px 7px rgba(0,0,0,0.3);
 }
 
-#pawn1 { background-color: var(--player1-color); }
-#pawn2 { background-color: var(--player2-color); }
-
-#main-game-area footer {
-    margin-top: 25px;
-    text-align: center;
-    min-height: 50px; 
+/* Specialrutor */
+.cell.special-tile {
+    background-color: #ffeaa7;
+    border: 1px dashed #fdcb6e;
 }
-
-#winner-message {
-    margin-top: 15px;
-    font-size: 1.6em;
+.cell.special-tile::before {
+    content: '?';
     font-weight: bold;
+    color: #d35400;
+    font-size: 0.8rem;
+    position: absolute;
+    top: 0; right: 2px;
 }
-#winner-message.player1wins { color: var(--player1-color); }
-#winner-message.player2wins { color: var(--player2-color); }
+
+/* Pjäser */
+.pawn {
+    width: 75%; height: 75%;
+    border-radius: 50%;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    z-index: 2;
+    transition: all 0.2s ease;
+}
+.pawn.p1 { background: var(--p1-color); border: 2px solid #c0392b; }
+.pawn.p2 { background: var(--p2-color); border: 2px solid #2980b9; }
+
+/* Väggar & Springor */
+.h-groove { width: var(--cell-size); height: var(--gap-size); }
+.v-groove { width: var(--gap-size); height: var(--cell-size); }
+.intersection { 
+    width: var(--gap-size); height: var(--gap-size); 
+    cursor: pointer; position: relative; z-index: 5; 
+}
+.intersection:hover { background: var(--groove-hover); }
+
+.wall { background: var(--wall-color) !important; z-index: 3; }
+.wall-preview { background: rgba(45, 52, 54, 0.3) !important; }
+
+/* Overlay */
+#message-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255,255,255,0.95);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    border-radius: 8px;
+    z-index: 20;
+}
+.hidden { display: none !important; }
+#restart-btn {
+    padding: 8px 16px;
+    background: var(--text-color);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    margin-top: 10px;
+}

@@ -1,377 +1,325 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const boardSize = 9;
+    const boardSize = 9; 
     const gameBoard = document.getElementById('game-board');
-    const currentPlayerNameDisplay = document.getElementById('current-player-name');
-    const turnIndicator = document.getElementById('turn-indicator');
+    const statusText = document.getElementById('game-status');
     
-    const player1WallStackContainer = document.getElementById('player1-wall-stack');
-    const player2WallStackContainer = document.getElementById('player2-wall-stack');
-    const player1WallsCountDisplay = document.getElementById('player1-walls-count');
-    const player2WallsCountDisplay = document.getElementById('player2-walls-count');
-
-    const winnerMessage = document.getElementById('winner-message');
-    const actionButtonElements = document.querySelectorAll('.action-button');
-
-    const cellWidth = 40; 
-    const grooveWidth = 7; 
-    const pawnSize = 32;
-
-    let gameState = {
-        currentPlayer: 1,
-        pawns: [ /* ... */ ],
-        walls: [],
-        playerWallsCount: { 1: 10, 2: 10 },
-        horizontalSegments: Array(boardSize - 1).fill(null).map(() => Array(boardSize).fill(false)),
-        verticalSegments: Array(boardSize).fill(null).map(() => Array(boardSize - 1).fill(false)),
-        selectedPawn: null,
+    // Game State
+    let state = {
+        turn: 1, 
+        // ÄNDRING: P1 startar nu på rad 8 (botten), P2 på rad 0 (toppen)
+        p1: { r: 8, c: 4, walls: 10 }, 
+        p2: { r: 0, c: 4, walls: 10 },
+        walls: [], 
         mode: 'move', 
-        gameOver: false
+        winner: null,
+        previewWall: null, 
+        specialTiles: [] 
     };
-    // Initialize pawns
-    gameState.pawns = [
-        { player: 1, row: 0, col: Math.floor(boardSize / 2), id: 'pawn1' },
-        { player: 2, row: boardSize - 1, col: Math.floor(boardSize / 2), id: 'pawn2' }
-    ];
 
-    let currentPreviewedGrooves = []; // För att hålla reda på förhandsvisade springor
+    function initGame() {
+        state.turn = 1;
+        // ÄNDRING: Återställ till nya startpositioner
+        state.p1 = { r: 8, c: 4, walls: 10 };
+        state.p2 = { r: 0, c: 4, walls: 10 };
+        state.walls = [];
+        state.winner = null;
+        state.previewWall = null;
+        
+        state.specialTiles = [];
+        for(let i=0; i<3; i++) {
+            state.specialTiles.push({
+                r: Math.floor(Math.random() * 5) + 2, 
+                c: Math.floor(Math.random() * 9)
+            });
+        }
 
-    function createBoard() {
+        renderBoard();
+        updateUI();
+        document.getElementById('message-overlay').classList.add('hidden');
+    }
+
+    function renderBoard() {
         gameBoard.innerHTML = '';
-        for (let r_idx = 0; r_idx < boardSize * 2 - 1; r_idx++) {
-            for (let c_idx = 0; c_idx < boardSize * 2 - 1; c_idx++) {
-                const div = document.createElement('div');
-                const r_cell = Math.floor(r_idx / 2);
-                const c_cell = Math.floor(c_idx / 2);
+        for (let r = 0; r < 17; r++) {
+            for (let c = 0; c < 17; c++) {
+                const el = document.createElement('div');
+                const cellR = Math.floor(r/2);
+                const cellC = Math.floor(c/2);
 
-                if (r_idx % 2 === 0 && c_idx % 2 === 0) { 
-                    div.classList.add('cell');
-                    div.dataset.row = r_cell;
-                    div.dataset.col = c_cell;
-                    div.addEventListener('click', handleCellClick);
-                } else if (r_idx % 2 === 0 && c_idx % 2 !== 0) { 
-                    div.classList.add('v-groove');
-                    div.dataset.row = r_cell; 
-                    div.dataset.col = c_cell; 
-                } else if (r_idx % 2 !== 0 && c_idx % 2 === 0) { 
-                    div.classList.add('h-groove');
-                    div.dataset.row = r_cell; 
-                    div.dataset.col = c_cell;   
-                } else { 
-                    div.classList.add('intersection');
-                    div.dataset.r = (r_idx - 1) / 2; 
-                    div.dataset.c = (c_idx - 1) / 2;
-                    div.addEventListener('click', handleIntersectionClick);
-                    // Event listeners för hover-hints
-                    div.addEventListener('mouseenter', handleIntersectionMouseEnter);
-                    div.addEventListener('mouseleave', handleIntersectionMouseLeave);
-                }
-                gameBoard.appendChild(div);
-            }
-        }
-        createPawns();
-        renderWalls(); // Se till att detta anropas korrekt
-        renderWallStacks();
-        updateGameInfo();
-        updateActionButtonStates();
-    }
+                if (r % 2 === 0 && c % 2 === 0) {
+                    el.className = 'cell';
+                    el.dataset.r = cellR;
+                    el.dataset.c = cellC;
+                    
+                    if (state.specialTiles.some(t => t.r === cellR && t.c === cellC)) {
+                        el.classList.add('special-tile');
+                    }
 
-    function createPawns() { /* ... (oförändrad från förra versionen) ... */ 
-        gameState.pawns.forEach(pawnState => {
-            let pawnElement = document.getElementById(pawnState.id);
-            if (!pawnElement) {
-                pawnElement = document.createElement('div');
-                pawnElement.classList.add('pawn');
-                pawnElement.id = pawnState.id;
-                gameBoard.appendChild(pawnElement);
-            }
-            const leftPos = pawnState.col * (cellWidth + grooveWidth) + (cellWidth - pawnSize) / 2;
-            const topPos = pawnState.row * (cellWidth + grooveWidth) + (cellWidth - pawnSize) / 2;
-            pawnElement.style.left = `${leftPos}px`;
-            pawnElement.style.top = `${topPos}px`;
-        });
-    }
-    
-    function renderWallStacks() { /* ... (oförändrad) ... */ 
-        player1WallStackContainer.innerHTML = '';
-        player2WallStackContainer.innerHTML = '';
-        player1WallsCountDisplay.textContent = gameState.playerWallsCount[1];
-        player2WallsCountDisplay.textContent = gameState.playerWallsCount[2];
+                    if (state.p1.r === cellR && state.p1.c === cellC) {
+                        const p = document.createElement('div');
+                        p.className = 'pawn p1';
+                        el.appendChild(p);
+                    } else if (state.p2.r === cellR && state.p2.c === cellC) {
+                        const p = document.createElement('div');
+                        p.className = 'pawn p2';
+                        el.appendChild(p);
+                    }
+                    
+                    el.onclick = () => handleMoveClick(cellR, cellC);
 
-        for (let i = 0; i < gameState.playerWallsCount[1]; i++) {
-            const wallVisual = document.createElement('div');
-            wallVisual.classList.add('wall-visual', 'player1-wall-visual');
-            player1WallStackContainer.appendChild(wallVisual);
-        }
-        for (let i = 0; i < gameState.playerWallsCount[2]; i++) {
-            const wallVisual = document.createElement('div');
-            wallVisual.classList.add('wall-visual', 'player2-wall-visual');
-            player2WallStackContainer.appendChild(wallVisual);
-        }
-    }
+                    if (state.mode === 'move' && !state.winner) {
+                        const currentPawn = state.turn === 1 ? state.p1 : state.p2;
+                        if (isValidMove(currentPawn, cellR, cellC)) {
+                            el.classList.add('valid-move');
+                        }
+                    }
 
-    function renderWalls() { // Säkerställ att klasser appliceras korrekt
-        // Rensa gamla klasser
-        document.querySelectorAll('.h-groove, .v-groove').forEach(g => {
-            g.classList.remove('h-wall-placed', 'v-wall-placed', 
-                                'player1-wall', 'player2-wall', 
-                                'wall-preview', 'player1-wall-preview', 'player2-wall-preview');
-        });
-
-        gameState.walls.forEach(wall => {
-            const playerClass = wall.player === 1 ? 'player1-wall' : 'player2-wall';
-            if (wall.orientation === 'H') {
-                const groove1 = gameBoard.querySelector(`.h-groove[data-row='${wall.r}'][data-col='${wall.c}']`);
-                const groove2 = gameBoard.querySelector(`.h-groove[data-row='${wall.r}'][data-col='${wall.c + 1}']`);
-                if (groove1) groove1.classList.add('h-wall-placed', playerClass);
-                if (groove2) groove2.classList.add('h-wall-placed', playerClass);
-            } else { // 'V'
-                const groove1 = gameBoard.querySelector(`.v-groove[data-row='${wall.r}'][data-col='${wall.c}']`);
-                const groove2 = gameBoard.querySelector(`.v-groove[data-row='${wall.r + 1}'][data-col='${wall.c}']`);
-                if (groove1) groove1.classList.add('v-wall-placed', playerClass);
-                if (groove2) groove2.classList.add('v-wall-placed', playerClass);
-            }
-        });
-        updateIntersectionHovers(); // Kan behövas för att städa upp hover-state om en vägg placeras
-    }
-
-    function updateGameInfo() { /* ... (oförändrad) ... */ 
-        currentPlayerNameDisplay.textContent = `Spelare ${gameState.currentPlayer}`;
-        turnIndicator.classList.remove('player1-turn', 'player2-turn');
-        turnIndicator.classList.add(gameState.currentPlayer === 1 ? 'player1-turn' : 'player2-turn');
-    }
-    
-    actionButtonElements.forEach(button => { /* ... (oförändrad) ... */ 
-        button.addEventListener('click', (event) => {
-            if (gameState.gameOver) return;
-            const buttonPlayer = parseInt(event.target.dataset.player);
-            if (buttonPlayer !== gameState.currentPlayer) return; 
-
-            const newMode = event.target.dataset.mode;
-            gameState.mode = newMode;
-
-            if (newMode.startsWith('wall')) {
-                deselectPawn();
-            }
-            updateActionButtonStates();
-            updateIntersectionHovers(); // Uppdatera hover-status när läge ändras
-        });
-    });
-
-    function updateActionButtonStates() { /* ... (oförändrad) ... */
-        actionButtonElements.forEach(btn => {
-            const buttonPlayer = parseInt(btn.dataset.player);
-            if (buttonPlayer === gameState.currentPlayer) {
-                btn.disabled = false;
-                if (btn.dataset.mode === gameState.mode) {
-                    btn.classList.add('selected-action');
+                } else if (r % 2 !== 0 && c % 2 !== 0) {
+                    el.className = 'intersection';
+                    el.dataset.r = Math.floor(r/2);
+                    el.dataset.c = Math.floor(c/2);
+                    el.onclick = () => handleIntersectionClick(Math.floor(r/2), Math.floor(c/2));
                 } else {
-                    btn.classList.remove('selected-action');
+                    el.className = r % 2 !== 0 ? 'h-groove' : 'v-groove';
+                    el.dataset.gr = r; 
+                    el.dataset.gc = c;
                 }
-            } else {
-                btn.disabled = true; 
-                btn.classList.remove('selected-action');
+                gameBoard.appendChild(el);
             }
-        });
-    }
-    
-    function updateIntersectionHovers() {
-        document.querySelectorAll('.intersection').forEach(inter => {
-            if (gameState.mode.startsWith('wall-') && gameState.playerWallsCount[gameState.currentPlayer] > 0 && !gameState.gameOver) {
-                inter.classList.add('wall-placement-hoverable');
-            } else {
-                inter.classList.remove('wall-placement-hoverable');
-            }
-        });
+        }
+        drawWalls();
     }
 
-    function deselectPawn() { /* ... (oförändrad) ... */ 
-        if (gameState.selectedPawn) {
-            const oldPawnCell = gameBoard.querySelector(`.cell[data-row='${gameState.selectedPawn.row}'][data-col='${gameState.selectedPawn.col}']`);
-            if (oldPawnCell) {
-                oldPawnCell.classList.remove('selected', 'player1', 'player2');
-            }
-            gameState.selectedPawn = null;
+    function drawWalls() {
+        state.walls.forEach(w => applyWallStyle(w, 'wall'));
+        if (state.previewWall) {
+            applyWallStyle(state.previewWall, 'wall-preview');
         }
     }
 
-    function handleCellClick(event) { /* ... (oförändrad) ... */ 
-        if (gameState.gameOver || gameState.mode !== 'move') return;
+    function applyWallStyle(w, className) {
+        const rBase = w.r * 2 + 1;
+        const cBase = w.c * 2 + 1;
+        
+        const intersection = gameBoard.querySelector(`.intersection[data-r="${w.r}"][data-c="${w.c}"]`);
+        if (intersection) intersection.classList.add(className);
 
-        const clickedRow = parseInt(event.target.dataset.row);
-        const clickedCol = parseInt(event.target.dataset.col);
+        if (w.type === 'H') {
+            const g1 = gameBoard.children[(rBase) * 17 + (w.c*2)];
+            const g2 = gameBoard.children[(rBase) * 17 + (w.c*2 + 2)];
+            if(g1) g1.classList.add(className);
+            if(g2) g2.classList.add(className);
+        } else {
+            const g1 = gameBoard.children[(w.r*2) * 17 + cBase];
+            const g2 = gameBoard.children[(w.r*2 + 2) * 17 + cBase];
+            if(g1) g1.classList.add(className);
+            if(g2) g2.classList.add(className);
+        }
+    }
 
-        if (gameState.selectedPawn) {
-            const pawn = gameState.selectedPawn;
-            if (isValidMove(pawn, clickedRow, clickedCol)) {
-                const currentPawnState = gameState.pawns.find(p => p.player === pawn.player);
-                currentPawnState.row = clickedRow;
-                currentPawnState.col = clickedCol;
-                deselectPawn();
-                createPawns();
-                checkWinCondition(currentPawnState);
-                if (!gameState.gameOver) switchPlayer();
+    function handleMoveClick(r, c) {
+        if (state.mode !== 'move' || state.winner) return;
+        const current = state.turn === 1 ? state.p1 : state.p2;
+
+        if (isValidMove(current, r, c)) {
+            current.r = r;
+            current.c = c;
+            
+            const bonusIndex = state.specialTiles.findIndex(t => t.r === r && t.c === c);
+            if (bonusIndex !== -1) {
+                state.specialTiles.splice(bonusIndex, 1);
+                if (Math.random() > 0.3) {
+                    current.walls++;
+                    alert(`Bonus! Spelare ${state.turn} hittade en extra vägg.`);
+                } else {
+                    alert(`Ingenting här... otur!`);
+                }
+            }
+
+            checkWin();
+            if (!state.winner) switchTurn();
+        }
+    }
+
+function isValidMove(pawn, targetR, targetC) {
+        // Hämta motståndarens position
+        const opponent = state.turn === 1 ? state.p2 : state.p1;
+
+        // REGEL 1: Man får ALDRIG landa på rutan där motståndaren står
+        if (targetR === opponent.r && targetC === opponent.c) {
+            return false;
+        }
+
+        const dR = targetR - pawn.r; // Skillnad i rader
+        const dC = targetC - pawn.c; // Skillnad i kolumner
+        const absDr = Math.abs(dR);
+        const absDc = Math.abs(dC);
+        const dist = absDr + absDc; // Totalt avstånd (Manhattan distance)
+
+        // REGEL 2: Vanligt steg (1 steg bort)
+        if (dist === 1) {
+            // Kontrollera bara att ingen vägg är i vägen
+            return !isBlocked(pawn.r, pawn.c, targetR, targetC);
+        }
+
+        // REGEL 3: Hopp över motståndare (2 steg rakt fram)
+        // Detta sker när avståndet är 2 i en riktning och 0 i den andra
+        if ((absDr === 2 && absDc === 0) || (absDr === 0 && absDc === 2)) {
+            // Räkna ut rutan som ligger mitt emellan (där motståndaren borde stå)
+            const midR = pawn.r + (dR / 2);
+            const midC = pawn.c + (dC / 2);
+
+            // Vi får bara hoppa om motståndaren faktiskt står där i mitten
+            if (midR === opponent.r && midC === opponent.c) {
+                // Kontrollera väggar:
+                // 1. Finns vägg mellan mig och motståndaren?
+                const blockedStep1 = isBlocked(pawn.r, pawn.c, midR, midC);
+                // 2. Finns vägg mellan motståndaren och dit jag vill landa?
+                const blockedStep2 = isBlocked(midR, midC, targetR, targetC);
+
+                // Hoppet är giltigt om ingen av vägarna är blockerad
+                return !blockedStep1 && !blockedStep2;
+            }
+        }
+
+        return false; 
+    }
+
+    function isBlocked(r1, c1, r2, c2) {
+        return state.walls.some(w => {
+            if (w.type === 'H') {
+                return (w.r === Math.min(r1, r2) && (w.c === c1 || w.c === c1 -1) && r1 !== r2);
             } else {
-                deselectPawn();
+                return (w.c === Math.min(c1, c2) && (w.r === r1 || w.r === r1 - 1) && c1 !== c2);
+            }
+        });
+    }
+
+    function handleIntersectionClick(r, c) {
+        if (state.mode === 'move' || state.winner) return;
+        
+        const currentP = state.turn === 1 ? state.p1 : state.p2;
+        if (currentP.walls <= 0) {
+            alert("Slut på väggar!");
+            return;
+        }
+
+        const type = state.mode === 'wall-h' ? 'H' : 'V';
+        
+        if (state.previewWall && state.previewWall.r === r && state.previewWall.c === c && state.previewWall.type === type) {
+            if (canPlaceWall(r, c, type)) {
+                state.walls.push(state.previewWall);
+                currentP.walls--;
+                state.previewWall = null;
+                state.mode = 'move';
+                switchTurn();
+            } else {
+                alert("Ogiltig placering! (Kanske blockerar vägen?)");
+                state.previewWall = null;
+                renderBoard();
             }
         } else {
-            const pawnToSelect = gameState.pawns.find(p => p.row === clickedRow && p.col === clickedCol && p.player === gameState.currentPlayer);
-            if (pawnToSelect) {
-                gameState.selectedPawn = { ...pawnToSelect };
-                event.target.classList.add('selected', pawnToSelect.player === 1 ? 'player1' : 'player2');
-            }
+            state.previewWall = { r, c, type, player: state.turn };
+            renderBoard();
         }
     }
 
-    function isValidMove(pawn, targetRow, targetCol) { /* ... (oförändrad) ... */ 
-        const dr = Math.abs(pawn.row - targetRow);
-        const dc = Math.abs(pawn.col - targetCol);
-        if (!((dr === 1 && dc === 0) || (dr === 0 && dc === 1))) return false;
+    function canPlaceWall(r, c, type) {
+        const collision = state.walls.some(w => 
+            (w.r === r && w.c === c) || 
+            (type === 'H' && w.type === 'H' && w.r === r && Math.abs(w.c - c) === 1) || 
+            (type === 'V' && w.type === 'V' && w.c === c && Math.abs(w.r - r) === 1) 
+        );
+        if (collision) return false;
 
-        if (targetRow < pawn.row) { if (gameState.horizontalSegments[targetRow][pawn.col]) return false; } 
-        else if (targetRow > pawn.row) { if (gameState.horizontalSegments[pawn.row][pawn.col]) return false; } 
-        else if (targetCol < pawn.col) { if (gameState.verticalSegments[pawn.row][targetCol]) return false; } 
-        else if (targetCol > pawn.col) { if (gameState.verticalSegments[pawn.row][pawn.col]) return false; }
-        return true;
+        state.walls.push({r, c, type});
+        
+        // ÄNDRING: P1 (start 8) ska till 0. P2 (start 0) ska till 8.
+        const p1HasPath = bfs(state.p1, 0); 
+        const p2HasPath = bfs(state.p2, 8); 
+        
+        state.walls.pop(); 
+
+        return p1HasPath && p2HasPath;
     }
 
-    function clearWallPreviews() {
-        currentPreviewedGrooves.forEach(g => {
-            g.classList.remove('wall-preview', 'player1-wall-preview', 'player2-wall-preview');
-        });
-        currentPreviewedGrooves = [];
-    }
+    function bfs(startNode, targetRow) {
+        let queue = [{r: startNode.r, c: startNode.c}];
+        let visited = new Set();
+        visited.add(`${startNode.r},${startNode.c}`);
 
-    function handleIntersectionMouseEnter(event) {
-        if (gameState.gameOver || !gameState.mode.startsWith('wall-') || gameState.playerWallsCount[gameState.currentPlayer] <= 0) {
-            return;
-        }
-        clearWallPreviews(); // Rensa tidigare previews
+        while(queue.length > 0) {
+            let curr = queue.shift();
+            if (curr.r === targetRow) return true;
 
-        const r_intersect = parseInt(event.target.dataset.r);
-        const c_intersect = parseInt(event.target.dataset.c);
-        const playerPreviewClass = gameState.currentPlayer === 1 ? 'player1-wall-preview' : 'player2-wall-preview';
-        let groove1, groove2;
-
-        if (gameState.mode === 'wall-h') {
-            if (c_intersect + 1 >= boardSize) return; // Kan inte förhandsvisa utanför brädet
-            // Kolla om segmenten är lediga och om det inte skapar en korsning (samma som i handleIntersectionClick)
-            if (!gameState.horizontalSegments[r_intersect][c_intersect] &&
-                !gameState.horizontalSegments[r_intersect][c_intersect + 1] &&
-                !checkCrossingWall(r_intersect, c_intersect, 'H')) {
+            const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+            for (let d of dirs) {
+                let nr = curr.r + d[0];
+                let nc = curr.c + d[1];
                 
-                groove1 = gameBoard.querySelector(`.h-groove[data-row='${r_intersect}'][data-col='${c_intersect}']`);
-                groove2 = gameBoard.querySelector(`.h-groove[data-row='${r_intersect}'][data-col='${c_intersect + 1}']`);
-            }
-        } else if (gameState.mode === 'wall-v') {
-            if (r_intersect + 1 >= boardSize) return; // Kan inte förhandsvisa utanför brädet
-            if (!gameState.verticalSegments[r_intersect][c_intersect] &&
-                !gameState.verticalSegments[r_intersect + 1][c_intersect] &&
-                !checkCrossingWall(r_intersect, c_intersect, 'V')) {
-
-                groove1 = gameBoard.querySelector(`.v-groove[data-row='${r_intersect}'][data-col='${c_intersect}']`);
-                groove2 = gameBoard.querySelector(`.v-groove[data-row='${r_intersect + 1}'][data-col='${c_intersect}']`);
-            }
-        }
-
-        if (groove1) { 
-            groove1.classList.add('wall-preview', playerPreviewClass);
-            currentPreviewedGrooves.push(groove1);
-        }
-        if (groove2) {
-            groove2.classList.add('wall-preview', playerPreviewClass);
-            currentPreviewedGrooves.push(groove2);
-        }
-    }
-
-    function handleIntersectionMouseLeave(event) {
-        clearWallPreviews();
-    }
-
-
-    function handleIntersectionClick(event) {
-        if (gameState.gameOver || (!gameState.mode.startsWith('wall-'))) return;
-        if (gameState.playerWallsCount[gameState.currentPlayer] <= 0) {
-            alert("Inga väggar kvar!");
-            return;
-        }
-        clearWallPreviews(); // Rensa preview innan placering
-
-        const intersection_r = parseInt(event.target.dataset.r); 
-        const intersection_c = parseInt(event.target.dataset.c); 
-
-        if (gameState.mode === 'wall-h') {
-            if (intersection_c + 1 >= boardSize) { alert("Kan inte placera vägg utanför brädet."); return; }
-            if (!gameState.horizontalSegments[intersection_r][intersection_c] &&
-                !gameState.horizontalSegments[intersection_r][intersection_c + 1] &&
-                !checkCrossingWall(intersection_r, intersection_c, 'H')) {
-                gameState.horizontalSegments[intersection_r][intersection_c] = true;
-                gameState.horizontalSegments[intersection_r][intersection_c + 1] = true;
-                gameState.walls.push({ r: intersection_r, c: intersection_c, orientation: 'H', player: gameState.currentPlayer });
-                finishWallPlacement();
-            } else {
-                alert("Ogiltig väggplacering (överlapp eller korsning)!");
-            }
-        } else if (gameState.mode === 'wall-v') {
-            if (intersection_r + 1 >= boardSize) { alert("Kan inte placera vägg utanför brädet."); return; }
-            if (!gameState.verticalSegments[intersection_r][intersection_c] &&
-                !gameState.verticalSegments[intersection_r + 1][intersection_c] &&
-                !checkCrossingWall(intersection_r, intersection_c, 'V')) {
-                gameState.verticalSegments[intersection_r][intersection_c] = true;
-                gameState.verticalSegments[intersection_r + 1][intersection_c] = true;
-                gameState.walls.push({ r: intersection_r, c: intersection_c, orientation: 'V', player: gameState.currentPlayer });
-                finishWallPlacement();
-            } else {
-                alert("Ogiltig väggplacering (överlapp eller korsning)!");
-            }
-        }
-    }
-    
-    function checkCrossingWall(r_intersect, c_intersect, newWallOrientation) { /* ... (oförändrad) ... */ 
-        if (newWallOrientation === 'H') { 
-            if (gameState.verticalSegments[r_intersect][c_intersect] &&
-                (r_intersect + 1 < boardSize && gameState.verticalSegments[r_intersect + 1][c_intersect])) {
-                return true;
-            }
-        } else { 
-            if (gameState.horizontalSegments[r_intersect][c_intersect] &&
-                (c_intersect + 1 < boardSize && gameState.horizontalSegments[r_intersect][c_intersect + 1])) {
-                return true;
+                if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) {
+                    let key = `${nr},${nc}`;
+                    if (!visited.has(key) && !isBlocked(curr.r, curr.c, nr, nc)) {
+                        visited.add(key);
+                        queue.push({r: nr, c: nc});
+                    }
+                }
             }
         }
         return false;
     }
 
-    function finishWallPlacement() { /* ... (oförändrad) ... */
-        gameState.playerWallsCount[gameState.currentPlayer]--;
-        renderWalls(); // Viktigt att detta anropas för att rita den nya väggen
-        renderWallStacks(); 
-        if (!gameState.gameOver) switchPlayer();
+    function switchTurn() {
+        state.turn = state.turn === 1 ? 2 : 1;
+        state.previewWall = null;
+        updateUI();
+        renderBoard();
     }
 
-    function switchPlayer() { /* ... (oförändrad, men ser till att updateIntersectionHovers anropas) ... */
-        gameState.currentPlayer = gameState.currentPlayer === 1 ? 2 : 1;
-        gameState.mode = 'move'; 
-        deselectPawn();
-        updateGameInfo();
-        updateActionButtonStates(); 
-        updateIntersectionHovers(); // Rensa/uppdatera hover-möjligheter
+    function checkWin() {
+        // ÄNDRING: Vinstvillkor bytta
+        if (state.p1.r === 0) endGame(1);
+        if (state.p2.r === 8) endGame(2);
     }
 
-    function checkWinCondition(pawnMoved) { /* ... (oförändrad) ... */
-        if (!pawnMoved) return;
-        let winner = null;
-        if (pawnMoved.player === 1 && pawnMoved.row === boardSize - 1) winner = 1;
-        else if (pawnMoved.player === 2 && pawnMoved.row === 0) winner = 2;
-
-        if (winner) {
-            gameState.gameOver = true;
-            winnerMessage.textContent = `Spelare ${winner} vinner!`;
-            winnerMessage.classList.remove('hidden');
-            winnerMessage.classList.add(winner === 1 ? 'player1wins' : 'player2wins');
-            actionButtonElements.forEach(btn => btn.disabled = true); 
-            updateIntersectionHovers(); // Ta bort hover-möjligheter vid spel slut
-        }
+    function endGame(winner) {
+        state.winner = winner;
+        document.getElementById('winner-text').innerText = `Spelare ${winner} Vinner!`;
+        document.getElementById('message-overlay').classList.remove('hidden');
     }
 
-    createBoard(); // Initiera spelet
+    function updateUI() {
+        document.getElementById('p1-walls').innerText = state.p1.walls;
+        document.getElementById('p2-walls').innerText = state.p2.walls;
+        statusText.innerText = `Spelare ${state.turn}, din tur!`;
+
+        document.getElementById('player1-panel').classList.toggle('active', state.turn === 1);
+        document.getElementById('player2-panel').classList.toggle('active', state.turn === 2);
+
+        document.querySelectorAll('.btn-action').forEach(btn => {
+            const p = parseInt(btn.dataset.player);
+            const m = btn.dataset.mode;
+            
+            if (p === state.turn) {
+                btn.disabled = false;
+                btn.classList.toggle('selected', state.mode === m);
+            } else {
+                btn.disabled = true;
+                btn.classList.remove('selected');
+            }
+        });
+    }
+
+    document.querySelectorAll('.btn-action').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+            state.mode = e.target.dataset.mode;
+            state.previewWall = null;
+            updateUI();
+            renderBoard();
+        });
+    });
+
+    document.getElementById('restart-btn').addEventListener('click', initGame);
+
+    initGame();
 });
