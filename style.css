@@ -3,12 +3,20 @@
     --board-bg: #ffffff;
     --groove-bg: #dfe6e9;
     --groove-hover: #b2bec3;
+    
     --p1-color: #ff6b6b;
+    --p1-dark: #c0392b; /* Mörkare röd för pil */
+    --p1-selected: #d63031;
+    --p1-goal-bg: #fab1a0; /* Ljusröd/Rosa målzonsfärg */
+    
     --p2-color: #48dbfb;
+    --p2-dark: #2980b9; /* Mörkare blå för pil */
+    --p2-selected: #0984e3;
+    --p2-goal-bg: #a0e6fa; /* Ljusblå målzonsfärg */
+    
     --text-color: #2d3436;
     --wall-color: #2d3436;
     
-    /* Lite mindre celler för att spara plats på höjden */
     --cell-size: 38px; 
     --gap-size: 8px;
 }
@@ -22,12 +30,13 @@ body {
     flex-direction: column;
     align-items: center;
     min-height: 100vh;
-    overflow: hidden; /* Försöker hindra scroll */
+    overflow: hidden;
+    touch-action: manipulation;
 }
 
 .main-header {
     text-align: center;
-    padding: 5px; /* Mindre luft */
+    padding: 5px;
     width: 100%;
     background: white;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
@@ -50,72 +59,78 @@ h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
     align-items: center;
     justify-content: center;
     width: 100%;
-    max-width: 1000px;
-    box-sizing: border-box;
+    max-width: 600px;
     height: 100%;
+    box-sizing: border-box;
 }
 
-/* Responsiv layout - Mobil */
 @media (max-width: 850px) {
     #game-container {
-        flex-direction: column-reverse; /* P1 längst ner */
-        padding: 5px;
-        gap: 5px;
-        justify-content: space-between; /* Sprid ut dem jämnt */
+        flex-direction: column-reverse;
+        justify-content: space-evenly;
+        height: 90vh;
     }
     #player2-panel { order: 3; }
     #board-wrapper { order: 2; margin: 5px 0; }
     #player1-panel { order: 1; }
     
-    :root { --cell-size: 32px; --gap-size: 6px; }
+    :root { --cell-size: 30px; --gap-size: 6px; }
 }
 
-/* Kompaktare Paneler */
 .player-panel {
     background: white;
     border-radius: 12px;
-    padding: 8px 12px; /* Mycket mindre luft */
-    width: 280px;
+    padding: 10px;
+    width: 90%;
+    max-width: 350px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.05);
-    transition: all 0.3s ease;
+    transition: transform 0.2s, border-color 0.2s;
     border: 2px solid transparent;
 }
-.player-panel.active { border-color: var(--text-color); }
+.player-panel.active { border-color: var(--text-color); transform: scale(1.02); }
 
-.panel-content { 
-    display: flex; 
-    align-items: center; 
-    gap: 10px; 
-    margin-bottom: 6px; /* Mindre mellanrum till knappar */
+.panel-content { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+
+/* Ikoner i panelen */
+.pawn-icon { 
+    width: 30px; height: 30px; border-radius: 50%; 
+    border: 2px solid rgba(0,0,0,0.1); 
+    display: flex; justify-content: center; align-items: center;
 }
-
-/* Mindre ikoner och text */
-.pawn-icon { width: 24px; height: 24px; border-radius: 50%; }
+.pawn-icon.player1-bg::after {
+    content: ''; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-bottom: 8px solid var(--p1-dark);
+}
+.pawn-icon.player2-bg::after {
+    content: ''; width: 0; height: 0;
+    border-left: 5px solid transparent; border-right: 5px solid transparent;
+    border-top: 8px solid var(--p2-dark);
+}
 .player1-bg { background: var(--p1-color); }
 .player2-bg { background: var(--p2-color); }
 
+.info-group { flex-grow: 1; }
 .info-group h2 { margin: 0; font-size: 1rem; }
-.wall-tracker { font-size: 0.8rem; color: #636e72; margin: 0; }
-.wall-tracker span { font-weight: bold; font-size: 1rem; color: var(--text-color); }
 
-/* Kompaktare knappar */
-.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; }
+.stats-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    color: #636e72;
+    margin-top: 2px;
+}
+.stat-box b { color: var(--text-color); font-size: 1rem; }
 
+.controls { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; }
 .btn-action {
-    padding: 6px 4px; /* Slimmare knappar */
-    border: none;
-    background: #f1f2f6;
-    border-radius: 6px;
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.75rem; /* Mindre text */
+    padding: 8px 0; border: none; background: #f1f2f6;
+    border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 0.8rem;
 }
 .btn-action.selected { background: var(--text-color); color: white; }
 .btn-action:disabled { opacity: 0.3; cursor: not-allowed; }
 
-/* Brädet */
-#board-wrapper { position: relative; flex-shrink: 0; }
-
+#board-wrapper { position: relative; }
 #game-board {
     display: grid;
     grid-template-columns: repeat(17, auto);
@@ -126,79 +141,69 @@ h1 { margin: 0; font-size: 1.2rem; letter-spacing: 1px; }
 }
 
 .cell {
-    width: var(--cell-size);
-    height: var(--cell-size);
-    background: var(--board-bg);
-    border-radius: 3px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    cursor: pointer;
-    position: relative;
+    width: var(--cell-size); height: var(--cell-size);
+    background: var(--board-bg); border-radius: 3px;
+    display: flex; justify-content: center; align-items: center;
+    cursor: pointer; position: relative;
+    transition: background-color 0.5s ease;
 }
 .cell.valid-move::after {
-    content: '';
-    width: 30%; height: 30%;
-    background: rgba(46, 204, 113, 0.5);
+    content: ''; width: 40%; height: 40%;
+    background: rgba(46, 204, 113, 0.6);
     border-radius: 50%;
+    box-shadow: 0 0 5px rgba(46, 204, 113, 0.4);
 }
 
-/* Specialrutor */
-.cell.special-tile {
-    background-color: #ffeaa7;
-    border: 1px dashed #fdcb6e;
-}
-.cell.special-tile::before {
-    content: '?';
-    font-weight: bold;
-    color: #d35400;
-    font-size: 0.8rem;
-    position: absolute;
-    top: 0; right: 2px;
-}
+/* MÅLZONER */
+.cell.goal-zone-p1 { background-color: var(--p1-goal-bg) !important; }
+.cell.goal-zone-p2 { background-color: var(--p2-goal-bg) !important; }
 
-/* Pjäser */
+/* PJÄSER */
 .pawn {
-    width: 75%; height: 75%;
-    border-radius: 50%;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-    z-index: 2;
-    transition: all 0.2s ease;
+    width: 70%; height: 70%; border-radius: 50%;
+    box-shadow: 0 3px 5px rgba(0,0,0,0.2); z-index: 2;
+    transition: all 0.2s ease; border: 2px solid rgba(0,0,0,0.1);
+    display: flex; justify-content: center; align-items: center;
 }
-.pawn.p1 { background: var(--p1-color); border: 2px solid #c0392b; }
-.pawn.p2 { background: var(--p2-color); border: 2px solid #2980b9; }
+.pawn.p1 { background: var(--p1-color); }
+.pawn.p2 { background: var(--p2-color); }
 
-/* Väggar & Springor */
+/* PILAR PÅ PJÄSERNA */
+.pawn.p1::after {
+    content: ''; width: 0; height: 0;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-bottom: 10px solid var(--p1-dark); margin-bottom: 2px;
+}
+.pawn.p2::after {
+    content: ''; width: 0; height: 0;
+    border-left: 6px solid transparent; border-right: 6px solid transparent;
+    border-top: 10px solid var(--p2-dark); margin-top: 2px;
+}
+
+.pawn.selected {
+    transform: scale(1.15); box-shadow: 0 0 10px rgba(0,0,0,0.5); z-index: 10;
+}
+.pawn.p1.selected { border: 3px solid var(--p1-selected); }
+.pawn.p2.selected { border: 3px solid var(--p2-selected); }
+
 .h-groove { width: var(--cell-size); height: var(--gap-size); }
 .v-groove { width: var(--gap-size); height: var(--cell-size); }
-.intersection { 
-    width: var(--gap-size); height: var(--gap-size); 
-    cursor: pointer; position: relative; z-index: 5; 
-}
+.intersection { width: var(--gap-size); height: var(--gap-size); cursor: pointer; position: relative; z-index: 5; }
 .intersection:hover { background: var(--groove-hover); }
 
 .wall { background: var(--wall-color) !important; z-index: 3; }
-.wall-preview { background: rgba(45, 52, 54, 0.3) !important; }
+.wall-preview { background: rgba(45, 52, 54, 0.4) !important; }
 
-/* Overlay */
 #message-overlay {
-    position: absolute;
-    top: 0; left: 0; right: 0; bottom: 0;
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
     background: rgba(255,255,255,0.95);
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    border-radius: 8px;
-    z-index: 20;
+    display: flex; flex-direction: column; justify-content: center;
+    align-items: center; border-radius: 8px; z-index: 20;
+    text-align: center; padding: 20px;
 }
 .hidden { display: none !important; }
+#winner-text { font-size: 1.5rem; margin-bottom: 20px; color: var(--text-color); }
 #restart-btn {
-    padding: 8px 16px;
-    background: var(--text-color);
-    color: white;
-    border: none;
-    border-radius: 5px;
-    font-size: 1rem;
-    margin-top: 10px;
+    padding: 10px 20px; background: var(--text-color); color: white;
+    border: none; border-radius: 5px; font-size: 1rem; cursor: pointer;
 }

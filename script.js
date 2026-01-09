@@ -1,38 +1,45 @@
 document.addEventListener('DOMContentLoaded', () => {
-    const boardSize = 9; 
     const gameBoard = document.getElementById('game-board');
     const statusText = document.getElementById('game-status');
     
     // Game State
     let state = {
-        turn: 1, 
-        // ÄNDRING: P1 startar nu på rad 8 (botten), P2 på rad 0 (toppen)
-        p1: { r: 8, c: 4, walls: 10 }, 
-        p2: { r: 0, c: 4, walls: 10 },
+        turn: 1,
+        players: {
+            1: { 
+                pawns: [],
+                walls: 10,
+                targetRow: 0,
+                color: 'p1'
+            },
+            2: { 
+                pawns: [],
+                walls: 10,
+                targetRow: 8,
+                color: 'p2'
+            }
+        },
         walls: [], 
         mode: 'move', 
+        selectedPawnIndex: null,
         winner: null,
-        previewWall: null, 
-        specialTiles: [] 
+        previewWall: null
     };
 
     function initGame() {
         state.turn = 1;
-        // ÄNDRING: Återställ till nya startpositioner
-        state.p1 = { r: 8, c: 4, walls: 10 };
-        state.p2 = { r: 0, c: 4, walls: 10 };
+        // Återställ pjäser (Röd på rad 8, Blå på rad 0)
+        state.players[1].pawns = [{ r: 8, c: 3, id: 'p1_a' }, { r: 8, c: 5, id: 'p1_b' }];
+        state.players[1].walls = 10;
+        
+        state.players[2].pawns = [{ r: 0, c: 3, id: 'p2_a' }, { r: 0, c: 5, id: 'p2_b' }];
+        state.players[2].walls = 10;
+
         state.walls = [];
         state.winner = null;
         state.previewWall = null;
+        state.selectedPawnIndex = null;
         
-        state.specialTiles = [];
-        for(let i=0; i<3; i++) {
-            state.specialTiles.push({
-                r: Math.floor(Math.random() * 5) + 2, 
-                c: Math.floor(Math.random() * 9)
-            });
-        }
-
         renderBoard();
         updateUI();
         document.getElementById('message-overlay').classList.add('hidden');
@@ -40,6 +47,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderBoard() {
         gameBoard.innerHTML = '';
+
+        // Kolla om spelare har lämnat sin baslinje för att färga motståndarens mållinje
+        const redLeftBase = !state.players[1].pawns.some(p => p.r === 8);
+        const blueLeftBase = !state.players[2].pawns.some(p => p.r === 0);
+
         for (let r = 0; r < 17; r++) {
             for (let c = 0; c < 17; c++) {
                 const el = document.createElement('div');
@@ -50,26 +62,34 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.className = 'cell';
                     el.dataset.r = cellR;
                     el.dataset.c = cellC;
-                    
-                    if (state.specialTiles.some(t => t.r === cellR && t.c === cellC)) {
-                        el.classList.add('special-tile');
-                    }
 
-                    if (state.p1.r === cellR && state.p1.c === cellC) {
-                        const p = document.createElement('div');
-                        p.className = 'pawn p1';
-                        el.appendChild(p);
-                    } else if (state.p2.r === cellR && state.p2.c === cellC) {
-                        const p = document.createElement('div');
-                        p.className = 'pawn p2';
-                        el.appendChild(p);
-                    }
-                    
+                    // Färga målzoner
+                    if (cellR === 0 && blueLeftBase) el.classList.add('goal-zone-p1'); // Rött mål
+                    if (cellR === 8 && redLeftBase) el.classList.add('goal-zone-p2'); // Blått mål
+
+                    // Rita Pjäser
+                    [1, 2].forEach(pid => {
+                        state.players[pid].pawns.forEach((p, idx) => {
+                            if (p.r === cellR && p.c === cellC) {
+                                const pawnDiv = document.createElement('div');
+                                pawnDiv.className = `pawn ${state.players[pid].color}`;
+                                if (state.turn === pid && state.selectedPawnIndex === idx && state.mode === 'move') {
+                                    pawnDiv.classList.add('selected');
+                                }
+                                pawnDiv.onclick = (e) => {
+                                    e.stopPropagation(); 
+                                    handlePawnSelect(pid, idx);
+                                };
+                                el.appendChild(pawnDiv);
+                            }
+                        });
+                    });
+
                     el.onclick = () => handleMoveClick(cellR, cellC);
 
-                    if (state.mode === 'move' && !state.winner) {
-                        const currentPawn = state.turn === 1 ? state.p1 : state.p2;
-                        if (isValidMove(currentPawn, cellR, cellC)) {
+                    if (state.mode === 'move' && !state.winner && state.selectedPawnIndex !== null) {
+                        const currentPawn = state.players[state.turn].pawns[state.selectedPawnIndex];
+                        if (currentPawn && isValidMove(currentPawn, cellR, cellC)) {
                             el.classList.add('valid-move');
                         }
                     }
@@ -81,8 +101,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     el.onclick = () => handleIntersectionClick(Math.floor(r/2), Math.floor(c/2));
                 } else {
                     el.className = r % 2 !== 0 ? 'h-groove' : 'v-groove';
-                    el.dataset.gr = r; 
-                    el.dataset.gc = c;
                 }
                 gameBoard.appendChild(el);
             }
@@ -98,11 +116,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function applyWallStyle(w, className) {
-        const rBase = w.r * 2 + 1;
-        const cBase = w.c * 2 + 1;
-        
         const intersection = gameBoard.querySelector(`.intersection[data-r="${w.r}"][data-c="${w.c}"]`);
         if (intersection) intersection.classList.add(className);
+
+        const rBase = w.r * 2 + 1;
+        const cBase = w.c * 2 + 1;
 
         if (w.type === 'H') {
             const g1 = gameBoard.children[(rBase) * 17 + (w.c*2)];
@@ -117,72 +135,93 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    function handleMoveClick(r, c) {
-        if (state.mode !== 'move' || state.winner) return;
-        const current = state.turn === 1 ? state.p1 : state.p2;
-
-        if (isValidMove(current, r, c)) {
-            current.r = r;
-            current.c = c;
-            
-            const bonusIndex = state.specialTiles.findIndex(t => t.r === r && t.c === c);
-            if (bonusIndex !== -1) {
-                state.specialTiles.splice(bonusIndex, 1);
-                if (Math.random() > 0.3) {
-                    current.walls++;
-                    alert(`Bonus! Spelare ${state.turn} hittade en extra vägg.`);
-                } else {
-                    alert(`Ingenting här... otur!`);
-                }
-            }
-
-            checkWin();
-            if (!state.winner) switchTurn();
+    function handlePawnSelect(pid, idx) {
+        if (state.winner || state.mode !== 'move') return;
+        if (pid === state.turn) {
+            state.selectedPawnIndex = idx;
+            renderBoard();
         }
     }
 
-function isValidMove(pawn, targetR, targetC) {
-        // Hämta motståndarens position
-        const opponent = state.turn === 1 ? state.p2 : state.p1;
+    function handleMoveClick(targetR, targetC) {
+        if (state.mode !== 'move' || state.winner || state.selectedPawnIndex === null) return;
+        
+        const playerObj = state.players[state.turn];
+        const pawn = playerObj.pawns[state.selectedPawnIndex];
 
-        // REGEL 1: Man får ALDRIG landa på rutan där motståndaren står
-        if (targetR === opponent.r && targetC === opponent.c) {
-            return false;
+        if (isValidMove(pawn, targetR, targetC)) {
+            pawn.r = targetR;
+            pawn.c = targetC;
+            
+            // MÅLGÅNG
+            if (pawn.r === playerObj.targetRow) {
+                playerObj.pawns.splice(state.selectedPawnIndex, 1);
+                state.selectedPawnIndex = null;
+                playerObj.walls++;
+                alert(`Pjäs i mål! ${state.turn === 1 ? 'Röd' : 'Blå'} får +1 vägg.`);
+
+                if (playerObj.pawns.length === 0) {
+                    endGame(state.turn);
+                } else {
+                    switchTurn();
+                }
+            } else {
+                switchTurn();
+            }
         }
+    }
 
-        const dR = targetR - pawn.r; // Skillnad i rader
-        const dC = targetC - pawn.c; // Skillnad i kolumner
+    // Uppdaterad logik för att inkludera DIAGONALA HOPP och STEG
+    function isValidMove(pawn, targetR, targetC) {
+        if (isOccupied(targetR, targetC)) return false;
+
+        const dR = targetR - pawn.r;
+        const dC = targetC - pawn.c;
         const absDr = Math.abs(dR);
         const absDc = Math.abs(dC);
-        const dist = absDr + absDc; // Totalt avstånd (Manhattan distance)
+        const dist = absDr + absDc;
 
-        // REGEL 2: Vanligt steg (1 steg bort)
+        // 1. Ortogonalt steg (1 steg)
         if (dist === 1) {
-            // Kontrollera bara att ingen vägg är i vägen
             return !isBlocked(pawn.r, pawn.c, targetR, targetC);
         }
 
-        // REGEL 3: Hopp över motståndare (2 steg rakt fram)
-        // Detta sker när avståndet är 2 i en riktning och 0 i den andra
+        // 2. Diagonalt steg (1 snett)
+        if (absDr === 1 && absDc === 1) {
+            return !isDiagonalBlocked(pawn.r, pawn.c, targetR, targetC);
+        }
+
+        // 3. Ortogonalt hopp (2 steg rakt)
         if ((absDr === 2 && absDc === 0) || (absDr === 0 && absDc === 2)) {
-            // Räkna ut rutan som ligger mitt emellan (där motståndaren borde stå)
             const midR = pawn.r + (dR / 2);
             const midC = pawn.c + (dC / 2);
-
-            // Vi får bara hoppa om motståndaren faktiskt står där i mitten
-            if (midR === opponent.r && midC === opponent.c) {
-                // Kontrollera väggar:
-                // 1. Finns vägg mellan mig och motståndaren?
-                const blockedStep1 = isBlocked(pawn.r, pawn.c, midR, midC);
-                // 2. Finns vägg mellan motståndaren och dit jag vill landa?
-                const blockedStep2 = isBlocked(midR, midC, targetR, targetC);
-
-                // Hoppet är giltigt om ingen av vägarna är blockerad
-                return !blockedStep1 && !blockedStep2;
+            if (isOccupied(midR, midC)) {
+                return !isBlocked(pawn.r, pawn.c, midR, midC) && !isBlocked(midR, midC, targetR, targetC);
             }
         }
 
-        return false; 
+        // 4. Diagonalt hopp (2 steg snett)
+        if (absDr === 2 && absDc === 2) {
+            const midR = pawn.r + (dR / 2);
+            const midC = pawn.c + (dC / 2);
+            if (isOccupied(midR, midC)) {
+                return !isDiagonalBlocked(pawn.r, pawn.c, midR, midC) && !isDiagonalBlocked(midR, midC, targetR, targetC);
+            }
+        }
+
+        return false;
+    }
+
+    function isDiagonalBlocked(r1, c1, r2, c2) {
+        // Kontrollera om båda vägarna runt hörnet är blockerade
+        const path1Blocked = isBlocked(r1, c1, r1, c2) || isBlocked(r1, c2, r2, c2);
+        const path2Blocked = isBlocked(r1, c1, r2, c1) || isBlocked(r2, c1, r2, c2);
+        return path1Blocked && path2Blocked;
+    }
+
+    function isOccupied(r, c) {
+        return state.players[1].pawns.some(p => p.r === r && p.c === c) ||
+               state.players[2].pawns.some(p => p.r === r && p.c === c);
     }
 
     function isBlocked(r1, c1, r2, c2) {
@@ -197,9 +236,9 @@ function isValidMove(pawn, targetR, targetC) {
 
     function handleIntersectionClick(r, c) {
         if (state.mode === 'move' || state.winner) return;
+        const playerObj = state.players[state.turn];
         
-        const currentP = state.turn === 1 ? state.p1 : state.p2;
-        if (currentP.walls <= 0) {
+        if (playerObj.walls <= 0) {
             alert("Slut på väggar!");
             return;
         }
@@ -209,12 +248,13 @@ function isValidMove(pawn, targetR, targetC) {
         if (state.previewWall && state.previewWall.r === r && state.previewWall.c === c && state.previewWall.type === type) {
             if (canPlaceWall(r, c, type)) {
                 state.walls.push(state.previewWall);
-                currentP.walls--;
+                playerObj.walls--;
                 state.previewWall = null;
                 state.mode = 'move';
+                state.selectedPawnIndex = null;
                 switchTurn();
             } else {
-                alert("Ogiltig placering! (Kanske blockerar vägen?)");
+                alert("Ogiltig placering!");
                 state.previewWall = null;
                 renderBoard();
             }
@@ -234,13 +274,13 @@ function isValidMove(pawn, targetR, targetC) {
 
         state.walls.push({r, c, type});
         
-        // ÄNDRING: P1 (start 8) ska till 0. P2 (start 0) ska till 8.
-        const p1HasPath = bfs(state.p1, 0); 
-        const p2HasPath = bfs(state.p2, 8); 
+        let allPathsValid = true;
+        // Alla kvarvarande pjäser måste kunna nå sina mål
+        state.players[1].pawns.forEach(p => { if (!bfs(p, 0)) allPathsValid = false; });
+        state.players[2].pawns.forEach(p => { if (!bfs(p, 8)) allPathsValid = false; });
         
         state.walls.pop(); 
-
-        return p1HasPath && p2HasPath;
+        return allPathsValid;
     }
 
     function bfs(startNode, targetRow) {
@@ -252,16 +292,29 @@ function isValidMove(pawn, targetR, targetC) {
             let curr = queue.shift();
             if (curr.r === targetRow) return true;
 
-            const dirs = [[-1,0], [1,0], [0,-1], [0,1]];
+            const dirs = [[-1,0], [1,0], [0,-1], [0,1], [-1,-1], [-1,1], [1,-1], [1,1]];
             for (let d of dirs) {
                 let nr = curr.r + d[0];
                 let nc = curr.c + d[1];
                 
                 if (nr >= 0 && nr < 9 && nc >= 0 && nc < 9) {
                     let key = `${nr},${nc}`;
-                    if (!visited.has(key) && !isBlocked(curr.r, curr.c, nr, nc)) {
-                        visited.add(key);
-                        queue.push({r: nr, c: nc});
+                    if (!visited.has(key)) {
+                         // Kontrollera om draget är möjligt (endast väggkoll)
+                         // Notera: För BFS struntar vi i andra pjäser, bara väggar stoppar vägen
+                        const dist = Math.abs(d[0]) + Math.abs(d[1]);
+                        let possible = false;
+
+                        if (dist === 1) { // Ortogonalt
+                             possible = !isBlocked(curr.r, curr.c, nr, nc);
+                        } else { // Diagonalt
+                             possible = !isDiagonalBlocked(curr.r, curr.c, nr, nc);
+                        }
+
+                        if (possible) {
+                            visited.add(key);
+                            queue.push({r: nr, c: nc});
+                        }
                     }
                 }
             }
@@ -272,26 +325,25 @@ function isValidMove(pawn, targetR, targetC) {
     function switchTurn() {
         state.turn = state.turn === 1 ? 2 : 1;
         state.previewWall = null;
+        state.selectedPawnIndex = null;
         updateUI();
         renderBoard();
     }
 
-    function checkWin() {
-        // ÄNDRING: Vinstvillkor bytta
-        if (state.p1.r === 0) endGame(1);
-        if (state.p2.r === 8) endGame(2);
-    }
-
     function endGame(winner) {
         state.winner = winner;
-        document.getElementById('winner-text').innerText = `Spelare ${winner} Vinner!`;
+        document.getElementById('winner-text').innerText = `SPELARE ${winner === 1 ? 'RÖD' : 'BLÅ'} VINNER!`;
         document.getElementById('message-overlay').classList.remove('hidden');
     }
 
     function updateUI() {
-        document.getElementById('p1-walls').innerText = state.p1.walls;
-        document.getElementById('p2-walls').innerText = state.p2.walls;
-        statusText.innerText = `Spelare ${state.turn}, din tur!`;
+        document.getElementById('p1-walls').innerText = state.players[1].walls;
+        document.getElementById('p1-pawns-left').innerText = state.players[1].pawns.length;
+        
+        document.getElementById('p2-walls').innerText = state.players[2].walls;
+        document.getElementById('p2-pawns-left').innerText = state.players[2].pawns.length;
+
+        statusText.innerText = state.turn === 1 ? "Röd Spelare: Välj pjäs eller vägg" : "Blå Spelare: Välj pjäs eller vägg";
 
         document.getElementById('player1-panel').classList.toggle('active', state.turn === 1);
         document.getElementById('player2-panel').classList.toggle('active', state.turn === 2);
@@ -314,6 +366,7 @@ function isValidMove(pawn, targetR, targetC) {
         btn.addEventListener('click', (e) => {
             state.mode = e.target.dataset.mode;
             state.previewWall = null;
+            state.selectedPawnIndex = null;
             updateUI();
             renderBoard();
         });

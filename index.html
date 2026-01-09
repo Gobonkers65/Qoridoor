@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Quoridor: Redux</title>
+    <title>Quoridor: Squad Tactics</title>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <header class="main-header">
-        <h1>QUORIDOR <span class="accent">REDUX</span></h1>
-        <div id="game-status">Spelare 1, din tur!</div>
+        <h1>QUORIDOR <span class="accent">SQUAD</span></h1>
+        <div id="game-status">Röd spelare, välj pjäs!</div>
     </header>
 
     <div id="game-container">
@@ -19,14 +19,15 @@
             <div class="panel-content">
                 <div class="pawn-icon player2-bg"></div>
                 <div class="info-group">
-                    <h2>Spelare 2</h2>
-                    <div class="wall-tracker">
-                        <span id="p2-walls">10</span> väggar
+                    <h2>Blå Spelare</h2>
+                    <div class="stats-row">
+                        <span class="stat-box">Kvar: <b id="p2-pawns-left">2</b></span>
+                        <span class="stat-box">Väggar: <b id="p2-walls">10</b></span>
                     </div>
                 </div>
             </div>
             <div class="controls">
-                <button class="btn-action" data-mode="move" data-player="2">Gå</button>
+                <button class="btn-action" data-mode="move" data-player="2">Flytta</button>
                 <button class="btn-action" data-mode="wall-h" data-player="2">Vägg —</button>
                 <button class="btn-action" data-mode="wall-v" data-player="2">Vägg |</button>
             </div>
@@ -44,14 +45,15 @@
             <div class="panel-content">
                 <div class="pawn-icon player1-bg"></div>
                 <div class="info-group">
-                    <h2>Spelare 1</h2>
-                    <div class="wall-tracker">
-                        <span id="p1-walls">10</span> väggar
+                    <h2>Röd Spelare</h2>
+                    <div class="stats-row">
+                        <span class="stat-box">Kvar: <b id="p1-pawns-left">2</b></span>
+                        <span class="stat-box">Väggar: <b id="p1-walls">10</b></span>
                     </div>
                 </div>
             </div>
             <div class="controls">
-                <button class="btn-action" data-mode="move" data-player="1">Gå</button>
+                <button class="btn-action" data-mode="move" data-player="1">Flytta</button>
                 <button class="btn-action" data-mode="wall-h" data-player="1">Vägg —</button>
                 <button class="btn-action" data-mode="wall-v" data-player="1">Vägg |</button>
             </div>
